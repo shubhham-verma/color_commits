@@ -141,7 +141,6 @@ export default function Home() {
 
       // console.log('Files: ', file_tree);
 
-
       setFiles(dummy_data);
       set_loading(false);
 
@@ -152,39 +151,77 @@ export default function Home() {
       // alert(`Error fetching: ${error}`);
     }
 
-
-
   }
 
+  const get_age_color = (dateString) => {
+    if (!dateString || dateString === 'unknown') return 'text-gray-500';
 
+    const daysOld = Math.floor((Date.now() - new Date(dateString)) / (1000 * 60 * 60 * 24));
+
+    if (daysOld <= 7) return 'text-green-400';
+    if (daysOld <= 30) return 'text-yellow-400';
+    if (daysOld <= 90) return 'text-orange-400';
+    if (daysOld <= 365) return 'text-red-400';
+    return 'text-gray-500';
+  };
+
+  const date_text = (dateString) => {
+    if (!dateString || dateString === 'unknown') return 'unknown';
+
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+
+    if (seconds < 60) return `${seconds} seconds ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days} day${days > 1 ? 's' : ''} ago`;
+
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months} month${months > 1 ? 's' : ''} ago`;
+
+    const years = Math.floor(months / 12);
+    return `${years} year${years > 1 ? 's' : ''} ago`;
+  };
 
   return (
-    <div>
-      <main className="min-h-screen bg-gray-900 text-white p-8">
-        <h1 className="text-4xl font-bold mb-6">🎨 ColorCommits</h1>
+    <div className='bg-gray-900 '>
+      <div className='px-50 mx-30'>
 
-        <form onSubmit={handle_submit} className="mb-4 space-y-4 ">
-          <input type="text" placeholder='Enter Github Url' value={repo_url} onChange={(e) => set_repo_url(e.target.value)} className='w-full p-3 text-white rounded-lg border-1 border-amber-100' />
+        <main className="min-h-screen bg-gray-900 text-white p-8 ">
+          <h1 className="text-4xl font-bold mb-6">🎨 ColorCommits</h1>
 
-          <button type='submit' className='bg-indigo-600 hover:bg-indigo-800 px-4 py-2 rounded text-white font-semibold ' > Analyze Repo </button>
-        </form>
+          <form onSubmit={handle_submit} className="mb-4 space-y-4 ">
+            <input type="text" placeholder='Enter Github Url' value={repo_url} onChange={(e) => set_repo_url(e.target.value)} className='w-full p-3 text-white rounded-lg border-1 border-amber-100' />
 
-        {loading && <div className='text-yellow-300 flex flex-row gap-2' >
-          <p>Fetching data....</p>
-          <div>
-            <Loader />
-          </div>
-        </div>}
+            <button type='submit' className='bg-indigo-600 hover:bg-indigo-800 px-4 py-2 rounded text-white font-semibold ' > Analyze Repo </button>
+          </form>
 
-        <ul className='mt-8 space-y-2' >
-          {files.map((file, index) => (<li key={index} className='p-2 rounded bg-gray-700'>
-            {file.path} - <span className='font-mono' > {file.date } </span>
-          </li>
-          ))}
+          {loading && <div className='text-yellow-300 flex flex-row gap-2' >
+            <p>Fetching data....</p>
+            <div>
+              <Loader />
+            </div>
+          </div>}
 
-        </ul>
+          <ul className='mt-8 space-y-2 ' >
+            {files.map((file, index) => (<li key={index} className='p-2 rounded bg-gray-700 flex justify-between px-15'>
+              {file.path} - <span className={`font-mono ${get_age_color(file.date)}`} title={`${new Date(file.date).toLocaleString()}`} >
+                {date_text(file.date)}
+              </span>
+            </li>
+            ))}
 
-      </main>
+          </ul>
+
+        </main>
+      </div>
+
     </div>
   );
 
