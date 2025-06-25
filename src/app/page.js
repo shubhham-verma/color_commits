@@ -27,6 +27,33 @@ export default function Home() {
     return data.default_branch;
   };
 
+  const get_last_commit_date = async (owner, repo, file_path) => {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?path=${encodeURIComponent(file_path)}&per_page=1`, {
+      headers: {
+        Authorization: `Beared ${TOKEN}`,
+        Accept: 'application/vnd.github+json'
+      }
+    });
+
+    if (!res.ok) {
+      console.log('Error in get_last_commit_date: ');
+      console.log(res);
+    }
+
+    const data = await res.json();
+    if (data.length === 0) {
+      console.log('Exiting where data.length === 0 ');
+      return null; // No commit history
+    }
+
+    const final = data[0].commit.author.date; // ISO timestamp
+    // console.log('final: ', final);
+    // console.log(final);
+
+    return final;
+
+  }
+
   const get_file_tree = async (owner, repo, branch = 'master') => {
     try {
       const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, {
@@ -93,12 +120,27 @@ export default function Home() {
 
       const branch = await getDefaultBranch(owner, repo);
       const file_tree = await get_file_tree(owner, repo, branch);
-      console.log('Files: ', file_tree);
 
-      const dummy_data = file_tree.map((file) => ({
-        path: file.path,
-        date: 'Unknown'
-      }))
+      const limited_tree = file_tree.slice(0, 20);
+
+      const files_with_dates = await Promise.all(
+        limited_tree.map(async (file) => {
+          const date = await get_last_commit_date(owner, repo, file.path);
+          // console.log('date: ', date);
+
+          return {
+            path: file.path,
+            date: date ? new Date(date).toLocaleDateString() : 'Unknown'
+          }
+        })
+      );
+
+      console.log('files_with_dates');
+      console.log(files_with_dates);
+      setFiles(files_with_dates);
+
+      // console.log('Files: ', file_tree);
+
 
       setFiles(dummy_data);
       set_loading(false);
@@ -135,8 +177,8 @@ export default function Home() {
         </div>}
 
         <ul className='mt-8 space-y-2' >
-          {files.map((files, index) => (<li key={index} className='p-2 rounded bg-gray-700'>
-            {files.path} - <span className='font-mono' > {files.date} </span>
+          {files.map((file, index) => (<li key={index} className='p-2 rounded bg-gray-700'>
+            {file.path} - <span className='font-mono' > {file.date } </span>
           </li>
           ))}
 
