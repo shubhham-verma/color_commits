@@ -8,6 +8,8 @@ export default function Home() {
   const [repo_url, set_repo_url] = useState('');
   const [loading, set_loading] = useState(false);
   const [files, setFiles] = useState([]);
+  const [tooltipIndex, setTooltipIndex] = useState(null);
+
 
   const TOKEN = process.env.NEXT_PUBLIC_TOKEN;
 
@@ -202,6 +204,15 @@ export default function Home() {
             <button type='submit' className='bg-indigo-600 hover:bg-indigo-800 px-4 py-2 rounded text-white font-semibold ' > Analyze Repo </button>
           </form>
 
+          {/* <div>
+            <button data-tooltip-target="tooltip-right" data-tooltip-placement="right" type="button" className="ms-3 mb-2 md:mb-0 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Tooltip right</button>
+
+            <div id="tooltip-right" role="tooltip" className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+              Tooltip on right
+              <div className="tooltip-arrow" data-popper-arrow></div>
+            </div>
+          </div> */}
+
           {loading && <div className='text-yellow-300 flex flex-row gap-2' >
             <p>Fetching data....</p>
             <div>
@@ -209,10 +220,32 @@ export default function Home() {
             </div>
           </div>}
 
+
           <ul className='mt-8 space-y-2 ' >
             {files.map((file, index) => (<li key={index} className='p-2 rounded bg-gray-700 flex justify-between px-15'>
-              {file.path} - <span className={`font-mono ${get_age_color(file.date)}`} title={`${new Date(file.date).toLocaleString()}`} >
-                {date_text(file.date)}
+              {file.path}
+              -
+              <span className={`font-mono ${get_age_color(file.date)}`}
+                onMouseEnter={() => setTooltipIndex(index)}
+                onMouseLeave={() => setTooltipIndex(null)}
+                onFocus={() => setTooltipIndex(index)}
+                onBlur={() => setTooltipIndex(null)}
+                style={{ position: 'relative' }} // Ensure tooltip is positioned correctly
+              >
+                {/* title={`${new Date(file.date).toLocaleString()}`} */}
+
+                {<div>
+                  {date_text(file.date)}
+                  {tooltipIndex === index && (
+                    <div
+                      className="absolute z-10 inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xs tooltip dark:bg-gray-500"
+                      style={{ left: '100%', top: 0, marginLeft: 8 }}
+                    >
+                      {new Date(file.date).toLocaleDateString()}
+                      <div className="tooltip-arrow" data-popper-arrow></div>
+                    </div>
+                  )}
+                </div>}
               </span>
             </li>
             ))}
