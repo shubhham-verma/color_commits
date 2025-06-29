@@ -10,6 +10,7 @@ export default function Home() {
   const [files, setFiles] = useState([]);
   const [tooltipIndex, setTooltipIndex] = useState(null);
 
+  const [new_data, set_new_data] = useState([]);
 
   const TOKEN = process.env.NEXT_PUBLIC_TOKEN;
 
@@ -32,14 +33,15 @@ export default function Home() {
   const get_last_commit_date = async (owner, repo, file_path) => {
     const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?path=${encodeURIComponent(file_path)}&per_page=1`, {
       headers: {
-        Authorization: `Beared ${TOKEN}`,
+        Authorization: `Bearer ${TOKEN}`,
         Accept: 'application/vnd.github+json'
       }
     });
 
     if (!res.ok) {
-      console.log('Error in get_last_commit_date: ');
+      console.log('Error in get_last_commit_date for file: ', file_path);
       console.log(res);
+      return null;
     }
 
     const data = await res.json();
@@ -54,7 +56,7 @@ export default function Home() {
 
     return final;
 
-  }
+  };
 
   const get_file_tree = async (owner, repo, branch = 'master') => {
     try {
@@ -84,10 +86,14 @@ export default function Home() {
       // console.log(formatted_url.pathname);
       const parts = formatted_url.pathname.split('/').filter(Boolean);
 
+      // console.log("parts");
+      // console.log(parts);
+
       if (parts.length >= 2) {
         return {
           owner: parts[0],
-          repo: parts[1]
+          repo: parts[1],
+          path: parts[2]
         };
       }
 
@@ -97,62 +103,6 @@ export default function Home() {
     }
 
     return null;
-  }
-
-  const handle_submit = async (event) => {
-    event.preventDefault();
-    set_loading(true);
-    setFiles([]);
-
-    // await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    const parsed_url = parse_github_url(repo_url);
-
-    if (!parsed_url) {
-      alert("Invalid URL!");
-      set_loading(false);
-      return;
-    }
-    const { owner, repo } = parsed_url;
-
-    // console.log('owner: ', owner, ' repo: ', repo);
-    // set_loading(false);
-
-    try {
-
-      const branch = await getDefaultBranch(owner, repo);
-      const file_tree = await get_file_tree(owner, repo, branch);
-
-      const limited_tree = file_tree.slice(0, 20);
-
-      const files_with_dates = await Promise.all(
-        limited_tree.map(async (file) => {
-          const date = await get_last_commit_date(owner, repo, file.path);
-          // console.log('date: ', date);
-
-          return {
-            path: file.path,
-            date: date ? new Date(date).toLocaleDateString() : 'Unknown'
-          }
-        })
-      );
-
-      console.log('files_with_dates');
-      console.log(files_with_dates);
-      setFiles(files_with_dates);
-
-      // console.log('Files: ', file_tree);
-
-      setFiles(dummy_data);
-      set_loading(false);
-
-
-    } catch (error) {
-      console.log(`Error in handle_submit : ${error}`);
-      set_loading(false);
-      // alert(`Error fetching: ${error}`);
-    }
-
   }
 
   const get_age_color = (dateString) => {
@@ -191,6 +141,109 @@ export default function Home() {
     return `${years} year${years > 1 ? 's' : ''} ago`;
   };
 
+  const get_folder_contents = async (owner, repo, path = '') => {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        Accept: 'application/vnd.github+json'
+      }
+    });
+
+    if (!res.ok) {
+      if (res.status === 404) return [];
+      const error = await res.json();
+      throw new Error(`${JSON.stringify(error)}`);
+    }
+
+    const data = await res.json();
+
+    const final_list = await Promise.all(
+      data.map(async (element) => {
+        let date = 'unknown';
+        if (element.type === 'file' || element.type === 'dir') {
+          date = await get_last_commit_date(owner, repo, element.path);
+        }
+        return {
+          name: element.name,
+          path: element.path,
+          type: element.type,
+          date: new Date(date).toLocaleString(),
+        };
+      })
+    );
+
+    console.log('final_list');
+    console.log(final_list);
+
+    return final_list;
+  };
+
+
+
+  const handle_submit = async (event) => {
+    event.preventDefault();
+    set_loading(true);
+    setFiles([]);
+
+    // await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    const parsed_url = parse_github_url(repo_url);
+
+    if (!parsed_url) {
+      alert("Invalid URL!");
+      set_loading(false);
+      return;
+    }
+    // const { owner, repo} = parsed_url;
+
+    const { owner, repo, path = '' } = parsed_url;
+
+
+    // console.log('owner: ', owner, ' repo: ', repo);
+    // set_loading(false);
+
+    try {
+
+      // print_folder_data(owner, repo, path);
+      const new_data = await get_folder_contents(owner, repo, path);
+
+      const branch = await getDefaultBranch(owner, repo);
+      const file_tree = await get_file_tree(owner, repo, branch);
+
+      const limited_tree = file_tree.slice(0, 50);
+
+      const files_with_dates = await Promise.all(
+        limited_tree.map(async (file) => {
+          const date = await get_last_commit_date(owner, repo, file.path);
+          // console.log('date: ', date);
+
+          return {
+            path: file.path,
+            date: date ? new Date(date).toLocaleDateString() : 'Unknown'
+          }
+        })
+      );
+
+      // console.log('files_with_dates');
+      // console.log(files_with_dates);
+      setFiles(files_with_dates);
+
+      // console.log('Files: ', file_tree);
+
+      // setFiles(dummy_data);
+      set_loading(false);
+
+
+    } catch (error) {
+      console.log(`Error in handle_submit : ${error}`);
+      set_loading(false);
+      // alert(`Error fetching: ${error}`);
+    }
+
+  }
+
+
+
   return (
     <div className='bg-gray-900 '>
       <div className='px-50 mx-30'>
@@ -204,15 +257,6 @@ export default function Home() {
             <button type='submit' className='bg-indigo-600 hover:bg-indigo-800 px-4 py-2 rounded text-white font-semibold ' > Analyze Repo </button>
           </form>
 
-          {/* <div>
-            <button data-tooltip-target="tooltip-right" data-tooltip-placement="right" type="button" className="ms-3 mb-2 md:mb-0 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Tooltip right</button>
-
-            <div id="tooltip-right" role="tooltip" className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-              Tooltip on right
-              <div className="tooltip-arrow" data-popper-arrow></div>
-            </div>
-          </div> */}
-
           {loading && <div className='text-yellow-300 flex flex-row gap-2' >
             <p>Fetching data....</p>
             <div>
@@ -224,7 +268,7 @@ export default function Home() {
           <ul className='mt-8 space-y-2 ' >
             {files.map((file, index) => (<li key={index} className='p-2 rounded bg-gray-700 flex justify-between px-15'>
               {file.path}
-              -
+
               <span className={`font-mono ${get_age_color(file.date)}`}
                 onMouseEnter={() => setTooltipIndex(index)}
                 onMouseLeave={() => setTooltipIndex(null)}
@@ -232,7 +276,6 @@ export default function Home() {
                 onBlur={() => setTooltipIndex(null)}
                 style={{ position: 'relative' }} // Ensure tooltip is positioned correctly
               >
-                {/* title={`${new Date(file.date).toLocaleString()}`} */}
 
                 {<div>
                   {date_text(file.date)}
