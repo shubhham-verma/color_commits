@@ -6,11 +6,13 @@ import React, { useState } from 'react';
 export default function Home() {
 
   const [repo_url, set_repo_url] = useState('');
+  const [repo_name, set_repo_name] = useState('');
+  const [owner_name, set_owner_name] = useState('');
   const [loading, set_loading] = useState(false);
   const [files, setFiles] = useState([]);
   const [tooltipIndex, setTooltipIndex] = useState(null);
-
-  const [new_data, set_new_data] = useState([]);
+  // const [new_data, set_new_data] = useState([]);
+  const [current_path, set_current_path] = useState('');
 
   const TOKEN = process.env.NEXT_PUBLIC_TOKEN;
 
@@ -141,7 +143,31 @@ export default function Home() {
     return `${years} year${years > 1 ? 's' : ''} ago`;
   };
 
+  const path_manager = (path) => {
+    set_current_path(path);
+    const segments = path.split('/').filter(Boolean);
+
+    console.log("segments", segments);
+  }
+
+  const handle_breadcrumb_click = async (new_path) => {
+    set_current_path(new_path);
+
+    const updated_files = await get_folder_contents(owner_name, repo_name, new_path);
+
+    setFiles(updated_files);
+
+
+  }
+
   const get_folder_contents = async (owner, repo, path = '') => {
+
+    // const repo_path = `${owner}/${repo}/${path}`;
+    // path_manager(repo_path);
+
+    set_loading(true);
+    path_manager(path);
+
     const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
       headers: {
         Authorization: `Bearer ${TOKEN}`,
@@ -162,6 +188,7 @@ export default function Home() {
         let date = 'unknown';
         if (element.type === 'file' || element.type === 'dir') {
           date = await get_last_commit_date(owner, repo, element.path);
+
         }
         return {
           name: element.name,
@@ -172,9 +199,7 @@ export default function Home() {
       })
     );
 
-    console.log('final_list');
-    console.log(final_list);
-
+    set_loading(false);
     return final_list;
   };
 
@@ -197,6 +222,8 @@ export default function Home() {
     // const { owner, repo} = parsed_url;
 
     const { owner, repo, path = '' } = parsed_url;
+    set_owner_name(owner);
+    set_repo_name(repo);
 
 
     // console.log('owner: ', owner, ' repo: ', repo);
@@ -207,26 +234,11 @@ export default function Home() {
       // print_folder_data(owner, repo, path);
       const new_data = await get_folder_contents(owner, repo, path);
 
-      const branch = await getDefaultBranch(owner, repo);
-      const file_tree = await get_file_tree(owner, repo, branch);
-
-      const limited_tree = file_tree.slice(0, 50);
-
-      const files_with_dates = await Promise.all(
-        limited_tree.map(async (file) => {
-          const date = await get_last_commit_date(owner, repo, file.path);
-          // console.log('date: ', date);
-
-          return {
-            path: file.path,
-            date: date ? new Date(date).toLocaleDateString() : 'Unknown'
-          }
-        })
-      );
-
       // console.log('files_with_dates');
       // console.log(files_with_dates);
-      setFiles(files_with_dates);
+
+
+      setFiles(new_data);
 
       // console.log('Files: ', file_tree);
 
@@ -241,8 +253,6 @@ export default function Home() {
     }
 
   }
-
-
 
   return (
     <div className='bg-gray-900 '>
@@ -264,33 +274,86 @@ export default function Home() {
             </div>
           </div>}
 
+          <br />
+
+          <div className='breadcrumbs'>   {/** Breadcrumbs component */}
+            {(
+              <div className="flex gap-2 text-sm text-blue-300 mb-4 items-center">
+                <span
+                  className="cursor-pointer hover:underline"
+                  onClick={() => handle_breadcrumb_click('')}
+                >
+                  {repo_name || 'Your repo name: '}
+
+                </span>
+                {current_path.split('/').map((segment, index, arr) => {
+                  const fullPath = arr.slice(0, index + 1).join('/');
+                  return (
+                    <React.Fragment key={index}>
+                      <span>/</span>
+                      <span
+                        onClick={() => handle_breadcrumb_click(fullPath)}
+                        className="cursor-pointer hover:underline"
+                      >
+                        {segment}
+                      </span>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            )}
+
+          </div>
+
 
           <ul className='mt-8 space-y-2 ' >
-            {files.map((file, index) => (<li key={index} className='p-2 rounded bg-gray-700 flex justify-between px-15'>
-              {file.path}
+            {files.map((file, index) => (
 
-              <span className={`font-mono ${get_age_color(file.date)}`}
-                onMouseEnter={() => setTooltipIndex(index)}
-                onMouseLeave={() => setTooltipIndex(null)}
-                onFocus={() => setTooltipIndex(index)}
-                onBlur={() => setTooltipIndex(null)}
-                style={{ position: 'relative' }} // Ensure tooltip is positioned correctly
-              >
+              <li key={index} className='p-2 rounded bg-gray-700 flex justify-between px-15'>
+                {/* <div className='stylized-file-name' >
+                  {file.path}
+                </div> */}
+                <div className="flex items-center gap-2">
+                  <span>
+                    {file.type === 'dir' ? '📁' : '🗎'}   {/** File icon */}
+                  </span>
 
-                {<div>
-                  {date_text(file.date)}
-                  {tooltipIndex === index && (
-                    <div
-                      className="absolute z-10 inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xs tooltip dark:bg-gray-500"
-                      style={{ left: '100%', top: 0, marginLeft: 8 }}
+                  {file.type === 'dir' ? (
+                    <span
+                      className="cursor-pointer text-blue-300 hover:underline"
+                      onClick={() => handle_breadcrumb_click(file.path)}
                     >
-                      {new Date(file.date).toLocaleDateString()}
-                      <div className="tooltip-arrow" data-popper-arrow></div>
-                    </div>
+                      {file.name}
+                    </span>
+                  ) : (
+                    <span>{file.name}</span>
                   )}
-                </div>}
-              </span>
-            </li>
+                </div>
+
+                {/** Tooltip component */}
+                <span className={`font-mono ${get_age_color(file.date)}`}
+                  onMouseEnter={() => setTooltipIndex(index)}
+                  onMouseLeave={() => setTooltipIndex(null)}
+                  onFocus={() => setTooltipIndex(index)}
+                  onBlur={() => setTooltipIndex(null)}
+                  style={{ position: 'relative' }}
+                >
+
+                  {<div>
+                    {date_text(file.date)}  {/** Actual date component */}
+
+                    {tooltipIndex === index && (
+                      <div
+                        className="absolute z-10 inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xs tooltip dark:bg-gray-500"
+                        style={{ left: '100%', top: 0, marginLeft: 8 }}
+                      >
+                        {new Date(file.date).toLocaleDateString()}
+                        <div className="tooltip-arrow" data-popper-arrow></div>
+                      </div>
+                    )}
+                  </div>}
+                </span>
+              </li>
             ))}
 
           </ul>
