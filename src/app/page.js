@@ -11,7 +11,6 @@ export default function Home() {
   const [loading, set_loading] = useState(false);
   const [files, setFiles] = useState([]);
   const [tooltipIndex, setTooltipIndex] = useState(null);
-  // const [new_data, set_new_data] = useState([]);
   const [current_path, set_current_path] = useState('');
 
   const TOKEN = process.env.NEXT_PUBLIC_TOKEN;
@@ -60,37 +59,10 @@ export default function Home() {
 
   };
 
-  const get_file_tree = async (owner, repo, branch = 'master') => {
-    try {
-      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, {
-        headers: {
-          Authorization: `Bearer ${TOKEN}`,
-          Accept: 'application/vnd.github+json'
-        }
-      });
-
-      if (res.status != 200)
-        return `Error in github api:`, res.json();
-
-      const data = await res.json();
-
-      const final = data.tree.filter((item) => (item.type === 'blob'));
-      return final;
-
-    } catch (error) {
-      console.log(`Error in get_file_tree: ${res}`);
-    }
-  }
-
   const parse_github_url = (url) => {
     try {
       const formatted_url = new URL(url);
-      // console.log(formatted_url.pathname);
       const parts = formatted_url.pathname.split('/').filter(Boolean);
-
-      // console.log("parts");
-      // console.log(parts);
-
       if (parts.length >= 2) {
         return {
           owner: parts[0],
@@ -146,8 +118,6 @@ export default function Home() {
   const path_manager = (path) => {
     set_current_path(path);
     const segments = path.split('/').filter(Boolean);
-
-    console.log("segments", segments);
   }
 
   const handle_breadcrumb_click = async (new_path) => {
@@ -161,9 +131,6 @@ export default function Home() {
   }
 
   const get_folder_contents = async (owner, repo, path = '') => {
-
-    // const repo_path = `${owner}/${repo}/${path}`;
-    // path_manager(repo_path);
 
     set_loading(true);
     path_manager(path);
@@ -210,8 +177,6 @@ export default function Home() {
     set_loading(true);
     setFiles([]);
 
-    // await new Promise((resolve) => setTimeout(resolve, 1500));
-
     const parsed_url = parse_github_url(repo_url);
 
     if (!parsed_url) {
@@ -219,53 +184,53 @@ export default function Home() {
       set_loading(false);
       return;
     }
-    // const { owner, repo} = parsed_url;
 
     const { owner, repo, path = '' } = parsed_url;
     set_owner_name(owner);
     set_repo_name(repo);
 
 
-    // console.log('owner: ', owner, ' repo: ', repo);
-    // set_loading(false);
 
     try {
 
-      // print_folder_data(owner, repo, path);
       const new_data = await get_folder_contents(owner, repo, path);
-
-      // console.log('files_with_dates');
-      // console.log(files_with_dates);
-
-
       setFiles(new_data);
-
-      // console.log('Files: ', file_tree);
-
-      // setFiles(dummy_data);
       set_loading(false);
 
 
     } catch (error) {
       console.log(`Error in handle_submit : ${error}`);
       set_loading(false);
-      // alert(`Error fetching: ${error}`);
     }
 
   }
 
   return (
     <div className='bg-gray-900 '>
-      <div className='px-50 mx-30'>
+      <div className='px-4 sm:px-8 lg:px-20 max-w-screen-xl mx-auto'>
 
-        <main className="min-h-screen bg-gray-900 text-white p-8 ">
+        <main className="min-h-screen bg-gray-900 text-white px-8 py-6">
           <h1 className="text-4xl font-bold mb-6">🎨 ColorCommits</h1>
 
-          <form onSubmit={handle_submit} className="mb-4 space-y-4 ">
-            <input type="text" placeholder='Enter Github Url' value={repo_url} onChange={(e) => set_repo_url(e.target.value)} className='w-full p-3 text-white rounded-lg border-1 border-amber-100' />
+          <form onSubmit={handle_submit} className="mb-4">
+            <div className="flex flex-col sm:flex-row gap-2 w-full">
+              <input
+                type="text"
+                placeholder="Enter GitHub URL"
+                value={repo_url}
+                onChange={(e) => set_repo_url(e.target.value)}
+                className="w-full sm:flex-1 p-3 text-white rounded-lg border border-amber-100 bg-gray-800"
+              />
 
-            <button type='submit' className='bg-indigo-600 hover:bg-indigo-800 px-4 py-2 rounded text-white font-semibold ' > Analyze Repo </button>
+              <button
+                type="submit"
+                className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-800 px-11 py-2 rounded text-white font-semibold"
+              >
+                Analyze Repo
+              </button>
+            </div>
           </form>
+
 
           {loading && <div className='text-yellow-300 flex flex-row gap-2' >
             <p>Fetching data....</p>
@@ -276,9 +241,9 @@ export default function Home() {
 
           <br />
 
-          <div className='breadcrumbs'>   {/** Breadcrumbs component */}
+          <div className='breadcrumbs '>   {/** Breadcrumbs component */}
             {(
-              <div className="flex gap-2 text-sm text-blue-300 mb-4 items-center">
+              <div className="flex gap-2 text-sm text-blue-300 mb-4 items-center overflow-x-auto whitespace-nowrap scrollbar-thin">
                 <span
                   className="cursor-pointer hover:underline"
                   onClick={() => handle_breadcrumb_click('')}
@@ -302,57 +267,58 @@ export default function Home() {
                 })}
               </div>
             )}
-
           </div>
 
 
           <ul className='mt-8 space-y-2 ' >
             {files.map((file, index) => (
 
-              <li key={index} className='p-2 rounded bg-gray-700 flex justify-between px-15'>
-                {/* <div className='stylized-file-name' >
-                  {file.path}
-                </div> */}
-                <div className="flex items-center gap-2">
-                  <span>
-                    {file.type === 'dir' ? '📁' : '🗎'}   {/** File icon */}
-                  </span>
+              <li key={index} className={loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}>
+                <div className='px-4 py-2 sm:py-2 sm:px-12 rounded bg-gray-700 justify-between  flex flex-col sm:flex-row  content-around'>
 
-                  {file.type === 'dir' ? (
-                    <span
-                      className="cursor-pointer text-blue-300 hover:underline"
-                      onClick={() => handle_breadcrumb_click(file.path)}
-                    >
-                      {file.name}
+                  <div className="flex gap-2 whitespace-nowrap overflow-x-auto">
+                    <span>
+                      {file.type === 'dir' ? '📁' : '🗎'}   {/** File icon */}
                     </span>
-                  ) : (
-                    <span>{file.name}</span>
-                  )}
+
+                    {file.type === 'dir' ? (
+                      <span
+                        className="cursor-pointer text-blue-300 hover:underline truncate overflow-hidden max-w-[60vw] sm:max-w-[40vw]"
+                        onClick={() => handle_breadcrumb_click(file.path)}
+                      >
+                        {file.name}
+                      </span>
+                    ) : (
+                      <span>{file.name}</span>
+                    )}
+                  </div>
+
+                  {/** Tooltip component */}
+                  <div className={`font-mono ${get_age_color(file.date)}`}
+                    onMouseEnter={() => setTooltipIndex(index)}
+                    onMouseLeave={() => setTooltipIndex(null)}
+                    onFocus={() => setTooltipIndex(index)}
+                    onBlur={() => setTooltipIndex(null)}
+                    style={{ position: 'relative' }}
+                  >
+
+                    {<div>
+                      {date_text(file.date)}  {/** Actual date component */}
+
+                      {tooltipIndex === index && (
+                        <div
+                          className="absolute bottom-full mb-2 px-3 py-2 text-sm font-medium text-white bg-gray-900
+                           rounded-lg shadow-md whitespace-nowrap"
+                          style={{ maxWidth: '80vw', left: '50%', transform: 'translateX(-50%)' }}
+                        >
+                          {new Date(file.date).toLocaleDateString()}
+                          <div className="tooltip-arrow" data-popper-arrow></div>
+                        </div>
+                      )}
+                    </div>}
+                  </div>
                 </div>
 
-                {/** Tooltip component */}
-                <span className={`font-mono ${get_age_color(file.date)}`}
-                  onMouseEnter={() => setTooltipIndex(index)}
-                  onMouseLeave={() => setTooltipIndex(null)}
-                  onFocus={() => setTooltipIndex(index)}
-                  onBlur={() => setTooltipIndex(null)}
-                  style={{ position: 'relative' }}
-                >
-
-                  {<div>
-                    {date_text(file.date)}  {/** Actual date component */}
-
-                    {tooltipIndex === index && (
-                      <div
-                        className="absolute z-10 inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xs tooltip dark:bg-gray-500"
-                        style={{ left: '100%', top: 0, marginLeft: 8 }}
-                      >
-                        {new Date(file.date).toLocaleDateString()}
-                        <div className="tooltip-arrow" data-popper-arrow></div>
-                      </div>
-                    )}
-                  </div>}
-                </span>
               </li>
             ))}
 
@@ -363,7 +329,5 @@ export default function Home() {
 
     </div>
   );
-
-
 
 }
