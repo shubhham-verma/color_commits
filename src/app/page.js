@@ -5,11 +5,11 @@ import Form from '@/components/form';
 import Loader from '@/components/loader';
 import FileList from '@/components/file_list';
 
-import { get_age_color, parse_github_url, date_text } from '@/utils/helper';
+import { get_age_color, date_text } from '@/utils/helper';
 
 import use_github_repo from '@/hooks/use_github_repo';
 
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 
 export default function Home() {
 

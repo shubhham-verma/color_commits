@@ -85,7 +85,7 @@ export default function use_github_repo(TOKEN) {
                     name: element.name,
                     path: element.path,
                     type: element.type,
-                    date: new Date(date).toLocaleString(),
+                    date: date,
                 };
             })
         );

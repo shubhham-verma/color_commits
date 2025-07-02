@@ -14,6 +14,9 @@ export const date_text = (dateString) => {
     if (!dateString || dateString === 'unknown') return 'unknown';
 
     const date = new Date(dateString);
+
+    if (isNaN(date.getTime())) return 'unknown';
+    
     const now = new Date();
     const seconds = Math.floor((now - date) / 1000);
 
