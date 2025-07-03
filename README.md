@@ -17,7 +17,7 @@ ColorCommits is a web app that visualizes the recency of commits for files and f
 
 ![Home page with tooltip]({CE2A9830-8030-4B09-A9EA-0887BBCB48C2}.png)
 
-![Responsive design]({ED844B20-C0AB-4E7B-A343-96CDE42EEB9F}.png)
+![Responsive design]({C6B8EEAB-8F73-4BB3-B0B4-B29C5994B0CC}.png)
 
 ## Getting Started
 
